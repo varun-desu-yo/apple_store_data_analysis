@@ -1,0 +1,142 @@
+-- Combining the Description tables into a new singular table using union
+
+CREATE TABLE applestore_description_combined AS
+
+SELECT * FROM appleStore_description
+
+UNION ALL
+
+SELECT * FROM appleStore_description2
+
+UNION ALL
+
+SELECT * FROM appleStore_description3
+
+UNION ALL
+
+SELECT * FROM appleStore_description4
+
+-- Exploratory Data Analysis
+-- Check the number of unique apps in both AppleStore tables
+
+SELECT COUNT(distinct id) AS uniqueappIDs
+FROM AppleStore
+
+SELECT COUNT(distinct id) AS uniqueappIDs
+FROM applestore_description_combined
+
+-- Both queries give a number of unique app IDs present in the dataset. 
+-- Both have the same output meaning there is no missing value in the dataset.
+
+-- Check for any missing values in key fields
+
+SELECT COUNT(*) AS missingvalues
+FROM AppleStore
+WHERE track_name IS NULL or user_rating IS NULL or prime_genre IS NULL
+
+SELECT COUNT(*) AS missingvalues
+FROM applestore_description_combined
+WHERE app_desc IS NULL or size_bytes IS NULL
+
+-- As both the outputs are 0, it shows that there is no missing key value in any fields
+
+-- finding out the number of apps per genre
+
+SELECT prime_genre, COUNT(*) AS NumApps
+FROM AppleStore
+GROUP BY prime_genre
+ORDER BY NumApps desc
+
+-- we see that games and entertainment have a huge number of appsAppleStore
+
+-- to get app ratings
+
+SELECT min(user_rating) AS MinRating,
+       max(user_rating) AS MaxRating,
+       avg(user_rating) AS AvgRating
+FROM AppleStore       
+       
+-- avg rating is around 3.5        
+
+-- Max, Min and Avg prices of all apps grouped by Genre
+
+SELECT prime_genre,
+	   COUNT(*) AS NumApps,
+	   max(price) AS MaxPrice,
+	   min(price) AS MinPrice,
+       avg(price) AS AvgPrice
+FROM AppleStore
+GROUP BY prime_genre
+ORDER BY COUNT(*) desc
+       
+-- we can see that genre in the lower section has a low number of apps 'check again when writing report'
+
+SELECT CASE
+			WHEN price > 0 THEN 'paid'
+            ELSE 'free'
+        END AS App_Type,
+        avg(user_rating) AS Avg_Rating
+FROM AppleStore
+GROUP BY App_type
+
+-- on average rating of paid apps > free apps
+
+SELECT CASE
+			WHEN lang_num < 10 THEN '<10 Languages'
+            WHEN lang_num BETWEEN 10 AND 30 THEN '10 to 30 Languages'
+            ELSE '>30 Languages'
+        end AS Language_Bucket,
+        avg(user_rating) AS Avg_Rating
+FROM AppleStore
+GROUP BY Language_bucket
+ORDER BY Avg_Rating desc
+
+-- 10-30 lang has a higher rating
+
+-- Check genre with low ratings
+
+SELECT prime_genre,
+	   avg(user_rating) AS Avg_Rating
+FROM AppleStore
+GROUP BY prime_genre
+ORDER BY Avg_rating ASC
+LIMIT 10
+
+-- shows this genre might be good for making apps in
+
+-- any correlation between app description length and app rating
+
+SELECT CASE
+			WHEN length(b.app_desc) < 500 THEN 'short'
+            WHEN length(b.app_desc) BETWEEN 500 AND 1000 THEN 'Medium'
+            else 'long'
+	   END AS description_length_bucket,
+       avg(a.user_rating) AS Average_rating
+	
+FROM
+	AppleStore AS a
+JOIN	
+	applestore_description_combined AS b
+ON
+	a.id = b.id
+GROUP BY description_length_bucket
+ORDER BY Average_rating desc
+
+-- the longer the description the better the avg ratingAppleStore
+
+
+SELECT
+	prime_genre,
+    track_name,
+    user_rating
+FROM (
+		SELECT
+        prime_genre,
+        track_name,
+        user_rating,
+        RANK() OVER(PARTITION by prime_genre ORDER BY user_rating desc, rating_count_tot DESC) AS Rank
+        FROM AppleStore
+	) AS a
+WHERE a.rank = 1
+
+-- all the highest-rated apps FROM each genre
